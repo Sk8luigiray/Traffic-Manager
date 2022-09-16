@@ -1,0 +1,72 @@
+{{ if or (eq .Values.profile "pre") (eq .Values.profile "pro") }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: tm-dgt-integrations
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: tm-dgt-integrations
+spec:
+    selector:
+      app: tm-dgt-integrations
+    ports:
+      - port: {{ .Values.tmDgtIntegrations.port }}
+        targetPort: 3051
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tm-dgt-integrations
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: tm-dgt-integrations
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: tm-dgt-integrations
+  template:
+    metadata:
+      labels:
+        app: tm-dgt-integrations
+      annotations:
+        rollme: {{ randAlphaNum 5 | quote }}
+        
+    spec:
+      hostname: tm-dgt-integrations
+      containers:
+      {{ if (eq .Values.profile "pre") }}
+      - image: docker-registry.qodev.es/traffic-manager/dgt-integrations:latest
+      {{ else if (eq .Values.profile "pro") }}
+      - image: docker-registry.qodev.es/traffic-manager/dgt-integrations:latest
+      {{ end }}
+        imagePullPolicy: Always
+        name: tm-dgt-integrations
+        ports:
+        - containerPort: 3051
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+#            cpu: 100m
+            memory: 256Mi
+
+        env:
+          - name: TM_BACK_URL
+            value: "http://tm-back:8080"
+
+            
+#        livenessProbe:
+#          httpGet:
+#            path: /
+#            port: 8080
+#          initialDelaySeconds: 60
+#          periodSeconds: 60
+
+      imagePullSecrets:
+      - name: tm-regcred
+{{ end }}

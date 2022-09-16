@@ -1,0 +1,63 @@
+{{ if or (eq .Values.profile "pre") (eq .Values.profile "pro") }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: tm-adminer
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: tm-adminer
+spec:
+    selector:
+      app: tm-adminer
+    ports:
+      - port: {{ .Values.tmadminer.port }}
+        name: http
+        targetPort: 8080
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tm-adminer
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: tm-adminer
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: tm-adminer
+  template:
+    metadata:
+      labels:
+        app: tm-adminer
+    spec:
+      terminationGracePeriodSeconds: 5
+      hostname: tm-adminer
+      containers:
+      - image: adminer:{{ .Values.tmadminer.imageTag }}
+        imagePullPolicy: Always
+        name: tm-adminer
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+#            cpu: 100m
+            memory: 128Mi
+
+        ports:
+        - containerPort: 8080
+        env:
+          - name: ADMINER_DESIGN
+            value: lucas-sandery
+
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 60
+{{ end }}

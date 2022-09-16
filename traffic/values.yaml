@@ -1,0 +1,55 @@
+replicas: 1
+
+#Selecciona el perfil
+#pre=desarrollo (se despliega en namespace tm-dev)
+#pro=pruebas (se despliega en namespace tm-test)
+
+profile: pre
+
+tmfront:
+  imageTag: latest
+  port: 1080
+
+tmback:
+  imageTag: latest
+  port: 8080
+
+tmdb:
+  imageTag: 12-master
+  dbName: traffic
+  port: 5432
+
+redis:
+  imageTag: latest
+  port: 6379
+
+minio:
+  imageTag: latest
+  apiPort: 9000
+  consolePort: 9001
+
+tmDgtIntegrations:
+  imageTag: latest
+  port: 3051
+
+tmadminer:
+  imageTag: latest
+  port: 8080
+
+tmpgadmin:
+  imageTag: latest
+  port: 8080
+
+pre:
+  tmprofile: pre,test_data,sanction,data_analytic
+  profiletoken: c0dfbcf23f6fcf82adc731985ab570dfc4ab449b09cb234d2c50600d4f9f6dba
+  ingress:
+    tls: true
+    host: traffic-manager-dev.qodev.es
+
+pro:
+  tmprofile: pro,test_data,sanction,data_analytic
+  profiletoken: e13f77265887caeb6cc4e2405f67ada4f8c37a951815f0d23faa90f1541fb334
+  ingress:
+    tls: true
+    host: traffic-manager.qodev.es

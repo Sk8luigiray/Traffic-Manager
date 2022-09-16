@@ -1,0 +1,68 @@
+{{ if or (eq .Values.profile "pre") (eq .Values.profile "pro") }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: tm-front
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: tm-front
+spec:
+    selector:
+      app: tm-front
+    ports:
+      - port: {{ .Values.tmfront.port }}
+        name: http
+        targetPort: 80
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tm-front
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: tm-front
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: tm-front
+  template:
+    metadata:
+      labels:
+        app: tm-front
+      annotations:
+        rollme: {{ randAlphaNum 5 | quote }}
+        
+    spec:
+      hostname: tm-front
+      containers:
+      {{ if (eq .Values.profile "pre") }}
+      - image: docker-registry.qodev.es/traffic-manager/tm-front:candidate
+      {{ else if (eq .Values.profile "pro") }}
+      - image: docker-registry.qodev.es/traffic-manager/tm-front:test
+      {{ end }}
+        imagePullPolicy: Always
+        name: tm-front
+
+        ports:
+        - containerPort: 80
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+#            cpu: 80m
+            memory: 256Mi
+
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 60
+          periodSeconds: 60
+      imagePullSecrets:
+      - name: tm-regcred
+{{ end }}

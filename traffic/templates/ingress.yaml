@@ -1,0 +1,176 @@
+{{ if (eq .Values.profile "pre") }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: traffic-manager
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+
+spec:
+  {{ if .Values.pre.ingress.tls }}
+  tls:
+  - hosts:
+    - {{ .Values.pre.ingress.host }}
+    secretName: tm-dev-tls
+  {{ end }}
+  rules:
+  - host: "{{ .Values.pre.ingress.host }}"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: tm-front
+            port:
+              number: 1080
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: tm-back
+            port:
+              number: 8080
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tm-adminer
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: adminer-auth
+    nginx.ingress.kubernetes.io/auth-realm: 'Authentication Required - Adminer'
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/add-base-url: "true"
+    nginx.ingress.kubernetes.io/secure-backends: "true"
+    # adds 301 redirect with trailing slash
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      rewrite ^(/adminer)$ $1/ permanent;
+
+spec:
+  rules:
+  - host: "{{ .Values.pre.ingress.host }}"
+    http:
+      paths:
+      - path: /adminer(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: tm-adminer
+            port:
+              number: 8080
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tm-pgadmin
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+#    nginx.ingress.kubernetes.io/rewrite-target: /$2
+#    nginx.ingress.kubernetes.io/add-base-url: "true"
+    nginx.ingress.kubernetes.io/secure-backends: "true"
+    # adds 301 redirect with trailing slash
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Script-Name /pgadmin4;
+#      rewrite ^(/adminer)$ $1/ permanent;
+
+spec:
+  rules:
+  - host: "{{ .Values.pre.ingress.host }}"
+    http:
+      paths:
+      - path: /pgadmin4
+        pathType: Prefix
+        backend:
+          service:
+            name: tm-pgadmin
+            port:
+              number: 8080
+
+{{ else if (eq .Values.profile "pro") }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: traffic-manager
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+
+## DDoS block
+#    nginx.ingress.kubernetes.io/limit-connections: '10'
+#    nginx.ingress.kubernetes.io/limit-rpm: '60'
+    
+# Other directives
+#    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+spec:
+  {{ if .Values.pro.ingress.tls }}
+  tls:
+  - hosts:
+    - {{ .Values.pro.ingress.host }}
+    secretName: tm-tls
+  {{ end }}
+  rules:
+  - host: "{{ .Values.pro.ingress.host}}"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: tm-front
+            port:
+              number: 1080
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: tm-back
+            port:
+              number: 8080
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tm-adminer
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: adminer-auth
+    nginx.ingress.kubernetes.io/auth-realm: 'Authentication Required - Adminer'
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/add-base-url: "true"
+    nginx.ingress.kubernetes.io/secure-backends: "true"
+    # adds 301 redirect with trailing slash
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      rewrite ^(/adminer)$ $1/ permanent;
+
+spec:
+  rules:
+  - host: "{{ .Values.pro.ingress.host }}"
+    http:
+      paths:
+      - path: /adminer(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: tm-adminer
+            port:
+              number: 8080
+{{ end }}

@@ -1,0 +1,18 @@
+{{ if (eq .Values.profile "pre") }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: tm-camera
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: tm-back
+spec:
+    selector:
+      app: tm-back
+    type: NodePort
+    ports:
+      - name: camera
+        port: 6666
+        targetPort: 6666
+        nodePort: 32666
+{{ end }}

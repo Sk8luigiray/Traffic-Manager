@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: redis
+spec:
+    selector:
+      app: redis
+    ports:
+      - port: {{ .Values.redis.port }}
+        name: http
+        targetPort: 6379
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: redis
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      securityContext:
+        runAsUser: 0
+
+      terminationGracePeriodSeconds: 5
+      hostname: redis
+      containers:
+      - image: bitnami/redis:{{ .Values.redis.imageTag }}
+        imagePullPolicy: Always
+        name: redis
+        ports:
+        - containerPort: 6379
+        securityContext:
+          runAsUser: 0
+          allowPrivilegeEscalation: true
+
+        env:
+          - name: TZ
+            value: "Europe/Madrid"
+          - name: ALLOW_EMPTY_PASSWORD
+            value: "yes"
+          - name: REDIS_DISABLE_COMMANDS
+            value: FLUSHDB,FLUSHALL
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+#            cpu: 1
+            memory: 512Mi
+
+#        livenessProbe:
+#          httpGet:
+#            path: /
+#            port: 6379
+#          initialDelaySeconds: 60
+#          periodSeconds: 60
+
+        volumeMounts:
+          - mountPath: "/bitnami/redis/data"
+            name: redis-data
+
+      volumes:
+      - name: redis-data
+        hostPath:
+          {{ if (eq .Values.profile "pre") }}
+          path: /opt/volumes/traffic-manager/redis-dev/data
+          {{ else if (eq .Values.profile "pro") }}
+          path: /opt/volumes/traffic-manager/redis-pro/data
+          {{ end }}
+          type: Directory

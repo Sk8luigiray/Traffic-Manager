@@ -1,0 +1,27 @@
+  _____          __  __ _       ___  ___                                  
+ |_   _|        / _|/ _(_)      |  \/  |                                  
+   | |_ __ __ _| |_| |_ _  ___  | .  . | __ _ _ __   __ _  __ _  ___ _ __ 
+   | | '__/ _` |  _|  _| |/ __| | |\/| |/ _` | '_ \ / _` |/ _` |/ _ \ '__|
+   | | | | (_| | | | | | | (__  | |  | | (_| | | | | (_| | (_| |  __/ |   
+   \_/_|  \__,_|_| |_| |_|\___| \_|  |_/\__,_|_| |_|\__,_|\__, |\___|_|   
+                                                           __/ |          
+                                                          |___/           
+ =========================================================================
+ ||                    Lector Vision  ©2021                             ||
+ =========================================================================
+
+
+¡Bienvenid@ a Traffic Manager! El servicio ha sido desplegado correctamente en el namespace "{{ .Release.Namespace }}"
+
+Perfil seleccionado: "{{ .Values.profile }}"
+{{ if (eq .Values.profile "pre") }}
+Endpoint: "{{ .Values.pre.ingress.host }}"
+{{ end }}
+
+///// INSTRUCCIONES /////
+
+Para cambiar el perfil añade --set profile=<perfil> al despliegue de Helm. Puedes elegir entre los siguientes perfiles:
+pre: Desarrollo (por defecto)
+pro: Producción
+
+Para cambiar el Endpoint, añade --set pre.ingress.host=<nuevo-host> al despliegue de Helm (solo disponible en perfil "pre")

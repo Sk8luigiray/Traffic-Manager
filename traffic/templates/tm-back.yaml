@@ -1,0 +1,181 @@
+{{ if or (eq .Values.profile "pre") (eq .Values.profile "pro") }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: tm-back
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: tm-back
+spec:
+    selector:
+      app: tm-back
+    ports:
+      - port: {{ .Values.tmback.port }}
+        targetPort: 8080
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tm-back
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: tm-back
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: tm-back
+  template:
+    metadata:
+      labels:
+        app: tm-back
+      annotations:
+        rollme: {{ randAlphaNum 5 | quote }}
+        
+    spec:
+      hostname: tm-back
+      containers:
+      {{ if (eq .Values.profile "pre") }}
+      - image: docker-registry.qodev.es/traffic-manager/tm-back:candidate
+      {{ else if (eq .Values.profile "pro") }}
+      - image: docker-registry.qodev.es/traffic-manager/tm-back:test
+      {{ end }}
+        imagePullPolicy: Always
+        name: tm-back
+        ports:
+        - containerPort: 8080
+
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 2048Mi
+          limits:
+#            cpu: 100m
+            memory: 4096Mi
+
+        env:
+        
+          - name: PROVINCIA
+            value: "28"
+          - name: MUNICIPIO
+            value: "13"
+          - name: ORA_URL
+            value: https://demo.innguardapp.com/api  
+          - name: TZ
+            value: "Europe/Madrid"
+          {{ if (eq .Values.profile "pre") }}
+          - name: PROFILE
+            value: {{ .Values.pre.tmprofile }}
+          - name: PROFILE_TOKEN
+            value: {{ .Values.pre.profiletoken }}
+          {{ else if (eq .Values.profile "pro") }}
+          - name: PROFILE
+            value: {{ .Values.pro.tmprofile }}
+          - name: PROFILE_TOKEN
+            value: {{ .Values.pro.profiletoken }}
+          {{ end }}
+          - name: SECRET
+            value: tm_super_secret
+          - name: PROFILE_SECRET
+            value: tm_super_secret
+          - name: PORT
+            value: "8080"
+          - name: REDIS_HOST
+            value: redis
+          - name: REDIS_PORT
+            value: "6379"
+          - name: DB_HOST 
+            value: tm-db
+          - name: DB_PORT
+            value: "{{ .Values.tmdb.port }}"
+          - name: DB_NAME
+            value: {{ .Values.tmdb.dbName }}
+          - name: DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: tm-db-token
+                key: username
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: tm-db-token
+                key: password
+
+          - name: PVM_STATUS_UPDATE_BATCH_ENABLED
+            value: "true"
+          - name: PVM_STATUS_UPDATE_BATCH_CRON
+            value: 0 */1 * * * *
+          - name: PVM_PROGRAM_CONFIGURATION_BATCH_ENABLED
+            value: "true"
+          - name: PVM_PROGRAM_CONFIGURATION_BATCH_CRON
+            value: 0 */3 * * * *
+          - name: ORA_RETRY_BATCH_ENABLED
+            value: "false"
+          - name: ORA_RETRY_BATCH_CRON
+            value: 0 5 13 * * *
+          - name: SANCTION_EVALUATION_BATCH_ENABLED
+            value: "false"
+          - name: SANCTION_EVALUATION_BATCH_CRON
+            value: 0 5 10 * * *
+          - name: BULLS_EYE_LOCATION_BATCH_ENABLED
+            value: "false"
+          - name: BULLS_EYE_LOCATION_BATCH_CRON
+            value: 0 */1 * * * *
+          - name: ORA_EXPORT_BATCH_ENABLED
+            value: "true"
+          - name: ORA_EXPORT_BATCH_CRON
+            value: 0 36 12 * * *
+          - name: ABANDONED_VEHICLE_DETECTION_BATCH_ENABLED
+            value: "false"
+          - name: ABANDONED_VEHICLE_DETECTION_BATCH_CRON
+            value: 0 */2 * * * *
+          - name: CAR_PLATE_DELETION_BATCH_ENABLED
+            value: "false"
+          - name: CAR_PLATE_DELETION_BATCH_CRON
+            value: 0 */5 * * * *
+          - name: CAR_PLATE_MULTIMEDIA_DELETION_BATCH_ENABLED
+            value: "false"
+          - name: CAR_PLATE_MULTIMEDIA_DELETION_BATCH_CRON
+            value: 0 */2 * * * *
+          - name: MINIO_ACCESS_KEY
+            value: minio
+          - name: MINIO_SECRET_KEY
+            value: minio123
+          - name: MINIO_ENDPOINT
+            value: http://tm-minio-api:9000
+            
+          - name: URL_BASE
+            value: https://traffic-manager-dev.qodev.es
+
+          - name: ENV_QUALITY_UPDATE_BATCH_ENABLED
+            value: "true"
+
+          - name: SUMA_LOT_GENERATOR_ENABLED
+            value: "true"
+          - name: SUMA_LOT_GENERATOR_CRON
+            value: 0 0 14 * * *
+          - name: SUMA_LOT_MAIL_LIST
+            value: msanchez@qualityobjects.com
+
+#        livenessProbe:
+#          httpGet:
+#            path: /
+#            port: 8080
+#          initialDelaySeconds: 60
+#          periodSeconds: 60
+
+        volumeMounts:
+          - mountPath: "/etc/timezone"
+            name: timezone
+            readOnly: true
+
+      volumes:
+      - name: timezone
+        hostPath:
+          path: /etc/timezone
+          type: File
+      imagePullSecrets:
+      - name: tm-regcred
+{{ end }}
